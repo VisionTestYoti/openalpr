@@ -210,6 +210,11 @@ int main( int argc, const char** argv )
           resize(frame, frame, cv::Size(), 0.5, 0.5);
 #endif
           
+#ifdef WIN32
+		  cv::flip(frame, frame, 1);
+#endif // WIN32
+
+
         detectandshow(&alpr, frame, "", outputJson);
         sleep_ms(10);
         framenum++;
