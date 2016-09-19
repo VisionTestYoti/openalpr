@@ -202,8 +202,14 @@ int main( int argc, const char** argv )
 
       while (cap.read(frame))
       {
+          std::cout << "    Frame " << framenum << std::endl;
         if (framenum == 0)
           motiondetector.ResetMotionDetection(&frame);
+          
+#ifdef __APPLE__
+          resize(frame, frame, cv::Size(), 0.5, 0.5);
+#endif
+          
         detectandshow(&alpr, frame, "", outputJson);
         sleep_ms(10);
         framenum++;
@@ -356,8 +362,7 @@ bool detectandshow( Alpr* alpr, cv::Mat frame, std::string region, bool writeJso
   double totalProcessingTime = diffclock(startTime, endTime);
   if (measureProcessingTime)
     std::cout << "Total Time to process image: " << totalProcessingTime << "ms." << std::endl;
-  
-  
+    
   if (writeJson)
   {
     std::cout << alpr->toJson( results ) << std::endl;
@@ -369,11 +374,22 @@ bool detectandshow( Alpr* alpr, cv::Mat frame, std::string region, bool writeJso
       std::cout << "plate" << i << ": " << results.plates[i].topNPlates.size() << " results";
       if (measureProcessingTime)
         std::cout << " -- Processing Time = " << results.plates[i].processing_time_ms << "ms.";
+        
+        int x1 = results.plates[i].plate_points[0].x;
+        int y1 = results.plates[i].plate_points[0].y;
+        int x2 = results.plates[i].plate_points[2].x;
+        int y2 = results.plates[i].plate_points[2].y;
+        std::cout << " Loc: " << x1 << "," << y1 << "-" << x2 << "," << y2;
+        
       std::cout << std::endl;
 
       if (results.plates[i].regionConfidence > 0)
         std::cout << "State ID: " << results.plates[i].region << " (" << results.plates[i].regionConfidence << "% confidence)" << std::endl;
       
+        
+        cv::rectangle(frame, cv::Point(x1, y1), cv::Point(x2,y2), CV_RGB(255, 0, 0));
+        cv::putText(frame, results.plates[i].bestPlate.characters, cv::Point(x1,y1), cv::FONT_HERSHEY_SIMPLEX, 1.0, CV_RGB(0, 255,0));
+        
       for (int k = 0; k < results.plates[i].topNPlates.size(); k++)
       {
         // Replace the multiline newline character with a dash
@@ -389,7 +405,11 @@ bool detectandshow( Alpr* alpr, cv::Mat frame, std::string region, bool writeJso
     }
   }
 
-
+    imshow("Video", frame);
+    if (cv::waitKey(10) == 27 )
+    {
+        exit(1);
+    }
 
   return results.plates.size() > 0;
 }
